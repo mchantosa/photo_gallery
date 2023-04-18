@@ -3,6 +3,18 @@ let slides;
 let photos;
 let photoDetailsHeader;
 let commentsUL;
+let activePhoto;
+
+async function postData(url = "", data = {}) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+  return response.json();
+}
 
 async function getPhotos(){
   const responsePhotos = await fetch("/photos");
@@ -22,33 +34,60 @@ function populateSlides(){
   slides.insertAdjacentHTML(`beforeend`, templates.photos({photos: photos}));
 }
 
-function displayPhotoDetails(photo){
-  photoDetailsHeader.insertAdjacentHTML(`beforeend`, templates.photo_information(photo))
+function addLikesEventListener(){
+  const likes = document.querySelector('a.like');
+  likes.addEventListener('click', (e) => {
+    e.preventDefault();
+    postData("/photos/like", { photo_id: activePhoto.id }).then((data) => {
+      activePhoto.likes = data.total;
+      likes.textContent = `♡
+  ${data.total}
+  Likes`;
+    });
+  });
 }
 
-function updatePhotoDetails(photo){
+function addFavoritesEventListener(){
+  const favorites = document.querySelector('a.favorite');
+  favorites.addEventListener('click', (e) => {
+    e.preventDefault();
+    postData("/photos/favorite", { photo_id: activePhoto.id }).then((data) => {
+      activePhoto.favorites = data.total;
+      favorites.textContent = `☆
+  ${data.total}
+  Favorites`;
+    });
+  });  
+}
+
+function displayPhotoDetails(){
+  photoDetailsHeader.insertAdjacentHTML(`beforeend`, templates.photo_information(activePhoto))
+  addLikesEventListener();
+  addFavoritesEventListener();
+}
+
+function updatePhotoDetails(){
   photoDetailsHeader.innerHTML = '';
-  displayPhotoDetails(photo);
+  displayPhotoDetails(activePhoto);
 }
 
-async function displayComments(photoId){
-  const response = await fetch(`/comments?photo_id=${photoId}`);
+async function displayComments(){
+  const response = await fetch(`/comments?photo_id=${activePhoto.id}`);
   const comments = await response.json();
   commentsUL.insertAdjacentHTML(`beforeend`, templates.photo_comments({comments}));
 }
 
-async function updateComments(photoId){
+async function updateComments(){
   commentsUL.innerHTML='';
-  await displayComments(photoId);
+  await displayComments(activePhoto.id);
 }
 
 async function populatePageData(){
-  const photo = photos[0];
-  const photoId = photo.id;
+  activePhoto = photos[0];
   getTemplates();
   populateSlides();
-  displayPhotoDetails(photo);
-  await displayComments(photoId);
+  displayPhotoDetails();
+  await displayComments();
 }
 
 function getActive(){
@@ -86,23 +125,28 @@ async function changeSlide(active, nextActive){
   $(active).fadeOut(300);
   nextActive.classList.add('active');
   $(nextActive).delay(300).fadeIn(300);
-
+   
   const photoId = Number(nextActive.getAttribute('data-id'));
-  const photo = photos.find(p=>p.id === photoId);
-  updatePhotoDetails(photo);
-  await updateComments(photoId);
+  activePhoto = photos.find(p=>p.id === photoId);
+  updatePhotoDetails();
+  await updateComments();
 }
+
+
 
 document.addEventListener('DOMContentLoaded', async ()=>{
   console.log('document loaded...');
   slides = document.querySelector('#slides');
   photoDetailsHeader = document.querySelector('section>header');
   commentsUL = document.querySelector('#comments ul');
+
   const prevAnchor = document.querySelector('a.prev');
   const nextAnchor = document.querySelector('a.next');
   
   await getPhotos();
   await populatePageData();
+
+  const commentForm = document.querySelector('form');
   
   prevAnchor.addEventListener('click', async (e)=>{
     e.preventDefault();
@@ -112,6 +156,11 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   nextAnchor.addEventListener('click', async (e)=>{
     e.preventDefault();
     await moveActiveForward();
+  })
+
+  commentForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    console.log('submitted');
   })
   
 })
