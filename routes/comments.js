@@ -6,7 +6,6 @@ var _ = require("underscore");
 var md5 = require("MD5");
 
 var comments = JSON.parse(fs.readFileSync(path.resolve(path.dirname(__dirname), "data/comments.json"), "utf8"));
-//console.log(comments);
 
 function convertToGravatar(email) {
   return "http://www.gravatar.com/avatar/" + md5(email.toLowerCase().trim());

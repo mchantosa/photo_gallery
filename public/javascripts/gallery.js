@@ -5,11 +5,11 @@ let photoDetailsHeader;
 let commentsUL;
 let activePhoto;
 
-async function postData(url = "", data = {}) {
+async function postData(url = "", data = {}, contentType = "application/json") {
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": contentType,
     },
     body: JSON.stringify(data),
   });
@@ -82,6 +82,10 @@ async function updateComments(){
   await displayComments(activePhoto.id);
 }
 
+function addComment(comment){
+  commentsUL.insertAdjacentHTML(`beforeend`, templates.photo_comments({comments:[comment]}));
+}
+
 async function populatePageData(){
   activePhoto = photos[0];
   getTemplates();
@@ -146,7 +150,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   await getPhotos();
   await populatePageData();
 
-  const commentForm = document.querySelector('form');
+  const form = document.querySelector('form');
   
   prevAnchor.addEventListener('click', async (e)=>{
     e.preventDefault();
@@ -158,9 +162,16 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     await moveActiveForward();
   })
 
-  commentForm.addEventListener('submit', (e)=>{
+  form.addEventListener('submit', (e)=>{
     e.preventDefault();
     console.log('submitted');
+    formData = $(form).serialize();
+    postData('/comments/new', formData, 'application/x-www-form-urlencoded; charset=UTF-8').then(comment=>{
+      addComment(comment);
+    })
+    form.reset();
+
+  
   })
   
 })
